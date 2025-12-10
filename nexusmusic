@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: nexusmusic
+    env: static
+    branch: main
+    rootDirectory: apps/web
+    buildCommand: npm install && npm run build
+    staticPublishPath: .next/static
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://api.nexusmusic-1.onrender.com
