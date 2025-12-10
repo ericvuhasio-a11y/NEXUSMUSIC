@@ -1,0 +1,123 @@
+{
+  "name": "nexusmusic-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "15.0.0-rc.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.1",
+    "framer-motion": "^11.0.0"
+  }
+} 
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+};
+
+export default nextConfig; 
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        neon: {
+          purple: "#7B2CBF",
+          cyan: "#00F5D4",
+          pink: "#FF2E63",
+        },
+      },
+    },
+  },
+  plugins: [],
+};
+export default config; 
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "NexusMusic — The Final Form of Music",
+  description: "Infinite AI-generated music. Instant remixing. Real-time royalties.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className="bg-black text-white">{children}</body>
+    </html>
+  );
+} 
+'use client';
+
+import { motion } from "framer-motion";
+
+export default function Home() {
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black">
+      <div className="max-w-7xl mx-auto px-6 py-24">
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1 }}
+          className="text-center"
+        >
+          <h1 className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-neon-purple via-neon-cyan to-neon-pink bg-clip-text text-transparent mb-6">
+            NEXUSMUSIC
+          </h1>
+          <p className="text-2xl md:text-4xl text-gray-300 mb-12">
+            The world’s first AI-native music platform
+          </p>
+
+          <div className="space-y-8 max-w-2xl mx-auto">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-12 py-6 bg-gradient-to-r from-neon-purple to-neon-pink rounded-full text-2xl font-bold shadow-2xl hover:shadow-neon-purple/50 transition-all"
+            >
+              Start Remixing
+            </motion.button>
+
+            <div className="grid md:grid-cols-3 gap-8 mt-16 text-left">
+              <div className="p-6 bg-black/40 rounded-xl border border-neon-cyan/30">
+                <h3 className="text-2xl font-bold text-neon-cyan mb-2">Instant Remix</h3>
+                <p>Make any track more aggressive, dreamy, or cyberpunk in seconds</p>
+              </div>
+              <div className="p-6 bg-black/40 rounded-xl border border-neon-purple/30">
+                <h3 className="text-2xl font-bold text-neon-purple mb-2">Real-Time Royalties</h3>
+                <p>Polygon zkEVM – payouts every hour, transparent on-chain</p>
+              </div>
+              <div className="p-6 bg-black/40 rounded-xl border border-neon-pink/30">
+                <h3 className="text-2xl font-bold text-neon-pink mb-2">4K Reactive Visuals</h3>
+                <p>AI-generated videos that dance to the beat</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </main>
+  );
+} 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+} 
+
+
