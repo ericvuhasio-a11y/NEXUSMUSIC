@@ -1,0 +1,61 @@
+{
+  "name": "nexusmusic-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "15.0.0-rc.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.1",
+    "framer-motion": "^11.0.0"
+  }
+} 
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+};
+export default nextConfig;
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: ["./app/**/*.{js,ts,jsx,tsx,mdx}"],
+  theme: {
+    extend: {
+      colors: {
+        neon: {
+          purple: "#7B2CBF",
+          cyan: "#00F5D4",
+          pink: "#FF2E63",
+        },
+      },
+    },
+  },
+  plugins: [],
+};
+export default config; 
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "NexusMusic — The Final Form of Music",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body className="bg-black text-white">{children}</body>
+    </html>
+  );
+} 
+@tailwind base;
+@tailwind components;
+@tailwind utilities; 
