@@ -1,0 +1,72 @@
+[package]
+name = "nexus-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tower-http = { version = "0.5", features = ["cors"] } 
+use axum::{
+    routing::post,
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+use tower_http::cors::CorsLayer;
+
+#[derive(Deserialize)]
+struct RemixRequest {
+    track_id: String,
+    style: String,
+}
+
+#[derive(Serialize)]
+struct RemixResponse {
+    new_track_url: String,
+    message: String,
+}
+
+#[tokio::main]
+async fn main() {
+    let app = Router::new()
+        .route("/api/remix", post(remix_handler))
+        .layer(CorsLayer::permissive());
+
+    let addr = "0.0.0.0:8080".parse().unwrap();
+    println!("Nexus API listening on http://{}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+
+async fn remix_handler(Json(payload): Json<RemixRequest>) -> Json<RemixResponse> {
+    // This is the placeholder – later we call real AI models
+    let fake_url = format!("https://cdn.nexusmusic.ai/remixed/{}-{}.mp3", payload.track_id, payload.style);
+
+    Json(RemixResponse {
+        new_track_url: fake_url,
+        message: format!("Remixed in {} style! (Real generation coming soon)", payload.style),
+    })
+} 
+services:
+  - type: static
+    name: nexusmusic-frontend
+    env: static
+    rootDirectory: apps/web
+    buildCommand: npm install && npm run build
+    staticPublishPath: .next
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://nexus-api.onrender.com
+
+  - type: web
+    name: nexus-api
+    env: rust
+    branch: main
+    rootDirectory: services/api
+    buildCommand: cargo build --release
+    startCommand: ./target/release/nexus-api
+    plan: starter
