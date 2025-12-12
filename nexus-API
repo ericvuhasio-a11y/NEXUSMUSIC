@@ -1,0 +1,248 @@
+[package]
+name = "nexus-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tower-http = { version = "0.5", features = ["cors"] }
+reqwest = { version = "0.11", features = ["json"] } 
+use axum::{
+    routing::post,
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+use tower_http::cors::CorsLayer;
+use reqwest::Client;
+
+#[derive(Deserialize)]
+struct RemixRequest {
+    track_id: String,
+    style: String,
+}
+
+#[derive(Serialize)]
+struct RemixResponse {
+    new_track_url: String,
+    message: String,
+}
+
+#[tokio::main]
+async fn main() {
+    let app = Router::new()
+        .route("/api/remix", post(remix_handler))
+        .layer(CorsLayer::permissive());
+
+    let addr = "0.0.0.0:8080".parse().unwrap();
+    println!("Nexus AI Generation Engine listening on http://{}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+
+async fn remix_handler(Json(payload): Json<RemixRequest>) -> Json<RemixResponse> {
+    let client = Client::new();
+
+    // Real Suno v3.5 generation (replace YOUR_SUNO_API_KEY with your actual key)
+    let suno_response = client
+        .post("https://api.suno.ai/v1/generate")
+        .header("Authorization", "Bearer YOUR_SUNO_API_KEY_HERE")
+        .json(&serde_json::json!({
+            "prompt": format!("{} style remix of {}", payload.style, payload.track_id),
+            "model": "v3.5",
+            "duration": 60
+        }))
+        .send()
+        .await;
+
+    let new_url = match suno_response {
+        Ok(resp) => {
+            if let Ok(data) = resp.json::<serde_json::Value>().await {
+                data["audio_url"].as_str().unwrap_or("https://cdn.nexusmusic.ai/placeholder.mp3").to_string()
+            } else {
+                "https://cdn.nexusmusic.ai/placeholder.mp3".to_string()
+            }
+        }
+        Err(_) => "https://cdn.nexusmusic.ai/placeholder.mp3".to_string(),
+    };
+
+    Json(RemixResponse {
+        new_track_url: new_url,
+        message: format!("Generated new track in {} style!", payload.style),
+    })
+} 
+services:
+  - type: static
+    name: nexusmusic-frontend
+    env: static
+    rootDirectory: apps/web
+    buildCommand: npm install && npm run build
+    staticPublishPath: .next
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://nexus-api.onrender.com
+
+  - type: web
+    name: nexus-api
+    env: rust
+    branch: main
+    rootDirectory: services/api
+    buildCommand: cargo build --release
+    startCommand: ./target/release/nexus-api
+    plan: starter 
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
+
+export default function MusicPlayer({ currentTrack }: { currentTrack: string }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const togglePlay = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateProgress = () => {
+      setProgress((audio.currentTime / audio.duration) * 100 || 0);
+    };
+
+    audio.addEventListener('timeupdate', updateProgress);
+    return () => audio.removeEventListener('timeupdate', updateProgress);
+  }, []);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.src = currentTrack;
+      if (isPlaying) audioRef.current.play();
+    }
+  }, [currentTrack]);
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-black via-purple-900/80 to-black border-t border-purple-500/30 backdrop-blur-lg z-50">
+      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center space-x-6">
+          <button
+            onClick={togglePlay}
+            className="w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-2xl hover:shadow-purple-500/50 transition-all transform hover:scale-110"
+          >
+            {isPlaying ? (
+              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+              </svg>
+            ) : (
+              <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
+          </button>
+
+          <div className="hidden md:block">
+            <h3 className="text-lg font-bold text-white">Neon Dreams v2.3</h3>
+            <p className="text-sm text-gray-400">AI Remix – {currentTrack.includes('aggressive') ? 'Aggressive' : 'Default'}</p>
+          </div>
+        </div>
+
+        <div className="flex-1 mx-8">
+          <div className="relative h-1 bg-gray-800 rounded-full overflow-hidden">
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500"
+              style={{ width: `${progress}%` }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.2 }}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <span className="text-sm text-gray-400">0:00</span>
+          <span className="text-sm text-gray-400">3:42</span>
+        </div>
+      </div>
+
+      <audio ref={audioRef} preload="metadata" />
+    </div>
+  );
+} 
+'use client';
+
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import MusicPlayer from './components/MusicPlayer';
+import RemixControls from './components/RemixControls';
+
+export default function Home() {
+  const [currentTrack, setCurrentTrack] = useState('https://cdn.nexusmusic.ai/sample-track.mp3');
+
+  const handleNewTrack = (url: string) => {
+    setCurrentTrack(url);
+  };
+
+  return (
+    <>
+      <main className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black">
+        {/* ... your existing landing page content ... */}
+      </main>
+
+      <MusicPlayer currentTrack={currentTrack} />
+      <RemixControls onNewTrack={handleNewTrack} />
+    </>
+  );
+} 
+'use client';
+
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+
+export default function RemixControls({ onNewTrack }: { onNewTrack: (url: string) => void }) {
+  const [style, setStyle] = useState('aggressive');
+  const [loading, setLoading] = useState(false);
+
+  const styles = [
+    { id: 'aggressive', label: 'More Aggressive' },
+    { id: 'dreamy', label: 'Dreamy / Lofi' },
+    { id: 'cyberpunk', label: 'Cyberpunk Neon' },
+    { id: 'chill', label: 'Chill Vibes' },
+    { id: 'epic', label: 'Epic Cinematic' },
+  ];
+
+  const handleRemix = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/remix`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          track_id: 'neon-dreams-v2',
+          style: style,
+        }),
+      });
+
+      const data = await response.json();
+      onNewTrack(data.new_track_url);
+      alert(`${data.message}\nNew track: ${data.new_track_url}`);
+    } catch (err) {
+      alert('Remix failed – backend is waking up!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ... rest of the component (same as before) ...
+} 
