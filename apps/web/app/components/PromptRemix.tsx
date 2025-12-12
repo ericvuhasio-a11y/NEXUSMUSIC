@@ -14,7 +14,10 @@ export default function PromptRemix({ onNewTrack }: { onNewTrack: (url: string) 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/remix`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ track_id: 'neon-dreams-v2', style: prompt }),
+        body: JSON.stringify({
+          track_id: 'neon-dreams-v2',
+          style: prompt,
+        }),
       });
       const data = await response.json();
       onNewTrack(data.new_track_url);
@@ -65,61 +68,4 @@ export default function PromptRemix({ onNewTrack }: { onNewTrack: (url: string) 
       </motion.button>
     </div>
   );
-} 
-'use client';
-
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import MusicPlayer from './components/MusicPlayer';
-import PromptRemix from './components/PromptRemix';
-
-export default function Home() {
-  const [currentTrack, setCurrentTrack] = useState('https://cdn.nexusmusic.ai/sample-track.mp3');
-  const [beatIntensity, setBeatIntensity] = useState(0);
-
-  const handleNewTrack = (url: string) => {
-    setCurrentTrack(url);
-  };
-
-  // Simulate beat-reactive background
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setBeatIntensity(Math.random() * 100);
-    }, 200);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <>
-      {/* Reactive 4K background */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div
-          className="absolute inset-0 bg-gradient-to-br from-purple-950 via-black to-pink-950"
-          style={{
-            opacity: 0.8 + beatIntensity / 300,
-            filter: `blur(${20 - beatIntensity / 10}px)`,
-            transform: `scale(${1 + beatIntensity / 1000})`,
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-900/30 to-transparent animate-pulse" />
-      </div>
-
-      <main className="relative min-h-screen">
-        {/* Your existing landing page content here */}
-        <div className="max-w-7xl mx-auto px-6 py-24 text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-purple-500 via-cyan-400 to-pink-500 bg-clip-text text-transparent mb-6"
-          >
-            NEXUSMUSIC
-          </motion.h1>
-          {/* ... rest of your landing content ... */}
-        </div>
-      </main>
-
-      <MusicPlayer currentTrack={currentTrack} />
-      <PromptRemix onNewTrack={handleNewTrack} />
-    </>
-  );
-} 
+}
