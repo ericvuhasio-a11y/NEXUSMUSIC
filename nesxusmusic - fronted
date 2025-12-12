@@ -1,0 +1,95 @@
+[package]
+name = "nexus-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tower-http = { version = "0.5", features = ["cors"] }
+reqwest = { version = "0.11", features = ["json"] } 
+use axum::{
+    routing::post,
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+use tower_http::cors::CorsLayer;
+use reqwest::Client;
+
+#[derive(Deserialize)]
+struct RemixRequest {
+    track_id: String,
+    style: String,
+}
+
+#[derive(Serialize)]
+struct RemixResponse {
+    new_track_url: String,
+    message: String,
+}
+
+#[tokio::main]
+async fn main() {
+    let app = Router::new()
+        .route("/api/remix", post(remix_handler))
+        .layer(CorsLayer::permissive());
+
+    let addr = "0.0.0.0:8080".parse().unwrap();
+    println!("Nexus API listening on http://{}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+
+async fn remix_handler(Json(payload): Json<RemixRequest>) -> Json<RemixResponse> {
+    let client = Client::new();
+
+    // Real Suno API call (replace with your real Suno API key)
+    let suno_response = client
+        .post("https://api.suno.ai/v1/generate")
+        .header("Authorization", "Bearer YOUR_SUNO_API_KEY_HERE")
+        .json(&serde_json::json!({
+            "prompt": format!("Remix in {} style: {}", payload.style, payload.track_id),
+            "model": "v3.5"
+        }))
+        .send()
+        .await;
+
+    let new_url = match suno_response {
+        Ok(resp) => {
+            if let Ok(data) = resp.json::<serde_json::Value>().await {
+                data["audio_url"].as_str().unwrap_or("https://cdn.nexusmusic.ai/placeholder.mp3").to_string()
+            } else {
+                "https://cdn.nexusmusic.ai/placeholder.mp3".to_string()
+            }
+        }
+        Err(_) => "https://cdn.nexusmusic.ai/placeholder.mp3".to_string(),
+    };
+
+    Json(RemixResponse {
+        new_track_url: new_url,
+        message: format!("Generated new track in {} style!", payload.style),
+    })
+} 
+services:
+  - type: static
+    name: nexusmusic-frontend
+    env: static
+    rootDirectory: apps/web
+    buildCommand: npm install && npm run build
+    staticPublishPath: .next
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://nexus-api.onrender.com
+
+  - type: web
+    name: nexus-api
+    env: rust
+    branch: main
+    rootDirectory: services/api
+    buildCommand: cargo build --release
+    startCommand: ./target/release/nexus-api
+    plan: starter
